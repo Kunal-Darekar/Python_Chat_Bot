@@ -1,0 +1,7 @@
+room1:pass1
+room2:pass2
+myroom:pass123
+room:pass
+myfavroom:pass123
+master:0909
+kunal:123
