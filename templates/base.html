@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI-Enhanced Chat{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-chat-dots-fill me-2"></i>AI-Enhanced Chat
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    {% if session.username %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('rooms') }}">Chat Rooms</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('create_room') }}">Create Room</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#aiInfoModal">
+                            <i class="bi bi-robot"></i> AI Features
+                        </a>
+                    </li>
+                </ul>
+                <div class="navbar-nav">
+                    {% if session.username %}
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>{{ session.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('analytics') }}"><i class="bi bi-graph-up me-2"></i>Analytics</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <div class="d-flex">
+                        <a class="nav-link me-3" href="{{ url_for('login') }}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+                        <a class="nav-link" href="{{ url_for('register') }}"><i class="bi bi-person-plus me-1"></i>Register</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- AI Features Modal -->
+    <div class="modal fade" id="aiInfoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-robot me-2"></i>AI Features
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h4>This chat application includes the following AI enhancements:</h4>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-info text-white">
+                                    <h5><i class="bi bi-emoji-smile me-2"></i>Advanced Sentiment Analysis</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Real-time analysis of message sentiment with compound scoring</li>
+                                        <li>Visual sentiment indicators for messages</li>
+                                        <li>Comprehensive room sentiment reports and trends</li>
+                                        <li>Identification of most positive and negative messages</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="bi bi-graph-up me-2"></i>Multi-Algorithm Recommendation System</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Personalized room recommendations using multiple algorithms</li>
+                                        <li>Content-based filtering using TF-IDF vectorization</li>
+                                        <li>Collaborative filtering based on user behavior</li>
+                                        <li>Topic modeling using Latent Dirichlet Allocation (LDA)</li>
+                                        <li>Explanation of why rooms are recommended</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5><i class="bi bi-chat-dots me-2"></i>AI Chatbot Assistant</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Intelligent chatbot that can participate in conversations</li>
+                                        <li>Command-based interaction system</li>
+                                        <li>Knowledge base for common questions</li>
+                                        <li>Learning capabilities from user interactions</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-danger text-white">
+                                    <h5><i class="bi bi-keyboard me-2"></i>Predictive Text</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Smart text completion as you type</li>
+                                        <li>Personalized suggestions based on your writing style</li>
+                                        <li>Context-aware word predictions</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h5><i class="bi bi-person-badge me-2"></i>User Interest Profiling</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        <li>Automatic interest extraction from messages</li>
+                                        <li>Interest visualization and analytics</li>
+                                        <li>Personalized user profiles</li>
+                                        <li>Activity tracking and statistics</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Stats Modal -->
+    <div class="modal fade" id="userStatsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-bar-chart-fill me-2"></i>User Statistics
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="userStatsContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading user statistics...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Interests Modal -->
+    <div class="modal fade" id="userInterestsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-tags-fill me-2"></i>My Interests
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="userInterestsContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading your interests...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted">AI-Enhanced Chat Application &copy; 2024</span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

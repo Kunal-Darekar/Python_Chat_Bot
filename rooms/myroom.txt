@@ -1,2 +1,0 @@
-PERSON1: Hello person 2
-PERSON 2: Hii person 1

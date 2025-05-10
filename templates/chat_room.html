@@ -1,0 +1,757 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room_name }} - AI-Enhanced Chat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 250px);
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.25rem;
+    }
+
+    .message {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        max-width: 80%;
+    }
+
+    .message-mine {
+        background-color: #d1e7ff;
+        margin-left: auto;
+        border-bottom-right-radius: 0;
+    }
+
+    .message-other {
+        background-color: #f1f1f1;
+        margin-right: auto;
+        border-bottom-left-radius: 0;
+    }
+
+    .message-system {
+        background-color: #e2e3e5;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 90%;
+        text-align: center;
+        font-style: italic;
+    }
+
+    .message-bot {
+        background-color: #e7f5e7;
+        margin-right: auto;
+        border-bottom-left-radius: 0;
+        border-left: 3px solid #28a745;
+    }
+
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .message-sender {
+        font-weight: bold;
+    }
+
+    .message-time {
+        color: #6c757d;
+    }
+
+    .message-content {
+        word-break: break-word;
+    }
+
+    .chat-input {
+        margin-top: 1rem;
+    }
+
+    .sentiment-positive {
+        border-left: 3px solid #28a745;
+    }
+
+    .sentiment-negative {
+        border-left: 3px solid #dc3545;
+    }
+
+    .sentiment-neutral {
+        border-left: 3px solid #6c757d;
+    }
+
+    .prediction-tag {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .prediction-tag:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .sidebar-card {
+        margin-bottom: 1rem;
+    }
+
+    .room-info {
+        margin-bottom: 1rem;
+    }
+
+    .active-users {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    #messageInput {
+        resize: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-9">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="bi bi-chat-dots me-2"></i>{{ room_name }}
+                </h4>
+                <div>
+                    <button class="btn btn-sm btn-light me-2" id="refreshButton">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <a href="{{ url_for('rooms') }}" class="btn btn-sm btn-light">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Messages will be loaded here -->
+                        <div class="text-center p-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Loading messages...</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-input p-3">
+                        <form id="messageForm">
+                            <div class="mb-2">
+                                <textarea class="form-control" id="messageInput" rows="2" placeholder="Type your message here..." required></textarea>
+                            </div>
+
+                            {% if ai_enabled %}
+                            <div class="mb-2 d-flex flex-wrap gap-1" id="predictionContainer">
+                                <!-- Word predictions will appear here -->
+                            </div>
+                            {% endif %}
+
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <button type="button" class="btn btn-outline-secondary me-2" id="aiHelpButton">
+                                        <i class="bi bi-robot"></i> AI Help
+                                    </button>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send me-1"></i>Send
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow sidebar-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Room Info</h5>
+            </div>
+            <div class="card-body">
+                <div class="room-info">
+                    <p><strong>Description:</strong><br>{{ room_metadata.description or "No description provided." }}</p>
+
+                    {% if room_metadata.tags %}
+                    <p><strong>Tags:</strong></p>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        {% for tag in room_metadata.tags %}
+                        <span class="badge bg-info text-dark">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <p><strong>Messages:</strong> {{ room_metadata.message_count or 0 }}</p>
+                    <p><strong>Created:</strong> {{ room_metadata.created_at.split('T')[0] if room_metadata.created_at else "Unknown" }}</p>
+                </div>
+            </div>
+        </div>
+
+        {% if ai_enabled %}
+        <div class="card shadow sidebar-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Sentiment</h5>
+            </div>
+            <div class="card-body" id="sentimentContainer">
+                <div class="text-center">
+                    <button class="btn btn-sm btn-outline-success" id="analyzeSentimentButton">
+                        <i class="bi bi-emoji-smile me-1"></i>Analyze Sentiment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow sidebar-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Similar Rooms</h5>
+            </div>
+            <div class="card-body" id="similarRoomsContainer">
+                <div class="text-center">
+                    <button class="btn btn-sm btn-outline-warning" id="findSimilarButton">
+                        <i class="bi bi-search me-1"></i>Find Similar Rooms
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow sidebar-card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Active Users</h5>
+            </div>
+            <div class="card-body">
+                <div class="active-users" id="activeUsersContainer">
+                    <ul class="list-group">
+                        {% for user in room_metadata.active_users %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ user }}
+                            {% if user == username %}
+                            <span class="badge bg-primary rounded-pill">You</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Help Modal -->
+<div class="modal fade" id="aiHelpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-robot me-2"></i>AI Assistant Help
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You can interact with the AI assistant by starting your message with <code>@AIBot</code>.</p>
+
+                <h6>Example commands:</h6>
+                <ul>
+                    <li><code>@AIBot hello</code> - Greet the AI assistant</li>
+                    <li><code>@AIBot help</code> - Get help with available commands</li>
+                    <li><code>@AIBot tell me about this room</code> - Get information about the current room</li>
+                    <li><code>@AIBot summarize the conversation</code> - Get a summary of recent messages</li>
+                    <li><code>@AIBot tell me a joke</code> - Ask for a joke</li>
+                </ul>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" id="insertAIPrefix">
+                        <i class="bi bi-robot me-2"></i>Insert @AIBot in Message
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sentiment Analysis Modal -->
+<div class="modal fade" id="sentimentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-emoji-smile me-2"></i>Sentiment Analysis
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="sentimentModalContent">
+                <div class="text-center">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Analyzing sentiment...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='js/websocket.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomName = "{{ room_name }}";
+        const username = "{{ username }}";
+        const aiEnabled = {{ 'true' if ai_enabled else 'false' }};
+        const websocketEnabled = {{ 'true' if websocket_enabled else 'false' }};
+
+        const chatMessages = document.getElementById('chatMessages');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const predictionContainer = document.getElementById('predictionContainer');
+        const refreshButton = document.getElementById('refreshButton');
+        const aiHelpButton = document.getElementById('aiHelpButton');
+        const insertAIPrefix = document.getElementById('insertAIPrefix');
+        const analyzeSentimentButton = document.getElementById('analyzeSentimentButton');
+        const findSimilarButton = document.getElementById('findSimilarButton');
+
+        let lastMessageTimestamp = '';
+        let messageUpdateInterval;
+
+        // Add typing indicator element
+        const typingIndicator = document.createElement('div');
+        typingIndicator.id = 'typingIndicator';
+        typingIndicator.className = 'typing-indicator text-muted small fst-italic mt-2 mb-2';
+        typingIndicator.style.display = 'none';
+        document.querySelector('.chat-container').insertBefore(typingIndicator, document.querySelector('.chat-input'));
+
+        // Load initial messages
+        loadMessages();
+
+        // Set up auto-refresh only if WebSockets are not enabled
+        if (!websocketEnabled) {
+            messageUpdateInterval = setInterval(loadMessages, 5000);
+        }
+
+        // Event listeners
+        messageForm.addEventListener('submit', sendMessage);
+        refreshButton.addEventListener('click', loadMessages);
+        aiHelpButton.addEventListener('click', () => {
+            const aiHelpModal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
+            aiHelpModal.show();
+        });
+
+        if (insertAIPrefix) {
+            insertAIPrefix.addEventListener('click', () => {
+                messageInput.value = '@AIBot ' + messageInput.value;
+                messageInput.focus();
+                const aiHelpModal = bootstrap.Modal.getInstance(document.getElementById('aiHelpModal'));
+                aiHelpModal.hide();
+            });
+        }
+
+        if (analyzeSentimentButton) {
+            analyzeSentimentButton.addEventListener('click', analyzeSentiment);
+        }
+
+        if (findSimilarButton) {
+            findSimilarButton.addEventListener('click', findSimilarRooms);
+        }
+
+        // If AI is enabled, set up predictive text
+        if (aiEnabled) {
+            messageInput.addEventListener('input', getPredictions);
+        }
+
+        // Functions
+        function loadMessages() {
+            fetch(`/api/messages/${roomName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
+
+                    displayMessages(data.messages);
+                })
+                .catch(error => {
+                    console.error('Error loading messages:', error);
+                    showError('Failed to load messages. Please try again.');
+                });
+        }
+
+        function displayMessages(messages) {
+            if (!messages || messages.length === 0) {
+                chatMessages.innerHTML = `
+                    <div class="text-center p-4">
+                        <p>No messages yet. Be the first to say hello!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            chatMessages.innerHTML = '';
+
+            messages.forEach(message => {
+                const messageElement = document.createElement('div');
+
+                // Determine message type
+                let messageClass = 'message';
+                if (message.username === username) {
+                    messageClass += ' message-mine';
+                } else if (message.username === 'System') {
+                    messageClass += ' message-system';
+                } else if (message.username === 'AIBot') {
+                    messageClass += ' message-bot';
+                } else {
+                    messageClass += ' message-other';
+                }
+
+                // Format timestamp
+                const timestamp = message.timestamp.split(' ')[1]; // Just show time part
+
+                // Create message HTML
+                messageElement.className = messageClass;
+
+                if (message.username !== 'System') {
+                    messageElement.innerHTML = `
+                        <div class="message-header">
+                            <span class="message-sender">${message.username}</span>
+                            <span class="message-time">${timestamp}</span>
+                        </div>
+                        <div class="message-content">${message.content}</div>
+                    `;
+                } else {
+                    messageElement.innerHTML = `
+                        <div class="message-content">${message.content}</div>
+                        <div class="message-time">${timestamp}</div>
+                    `;
+                }
+
+                chatMessages.appendChild(messageElement);
+            });
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Update last message timestamp
+            if (messages.length > 0) {
+                lastMessageTimestamp = messages[messages.length - 1].timestamp;
+            }
+        }
+
+        function sendMessage(event) {
+            event.preventDefault();
+
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Try to send via WebSocket first if enabled
+            let sentViaWebSocket = false;
+            if (websocketEnabled && typeof sendMessageViaWebSocket === 'function') {
+                sentViaWebSocket = sendMessageViaWebSocket(message);
+            }
+
+            // Always send via API for persistence (WebSocket just handles real-time delivery)
+            fetch(`/api/messages/${roomName}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
+
+                    // Clear input and predictions
+                    messageInput.value = '';
+                    if (predictionContainer) {
+                        predictionContainer.innerHTML = '';
+                    }
+
+                    // Reload messages only if not using WebSockets
+                    if (!sentViaWebSocket) {
+                        loadMessages();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    showError('Failed to send message. Please try again.');
+                });
+        }
+
+        function getPredictions() {
+            if (!aiEnabled) return;
+
+            const currentText = messageInput.value.trim();
+
+            // Clear predictions if text is empty
+            if (!currentText) {
+                predictionContainer.innerHTML = '';
+                return;
+            }
+
+            fetch(`/api/predict?text=${encodeURIComponent(currentText)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        predictionContainer.innerHTML = '';
+                        return;
+                    }
+
+                    displayPredictions(data.predictions);
+                })
+                .catch(error => {
+                    console.error('Error getting predictions:', error);
+                    predictionContainer.innerHTML = '';
+                });
+        }
+
+        function displayPredictions(predictions) {
+            predictionContainer.innerHTML = '';
+
+            if (!predictions || predictions.length === 0) {
+                return;
+            }
+
+            predictions.forEach(prediction => {
+                const predictionElement = document.createElement('span');
+                predictionElement.className = 'badge bg-light text-dark prediction-tag';
+                predictionElement.textContent = prediction;
+
+                predictionElement.addEventListener('click', () => {
+                    messageInput.value += (messageInput.value.endsWith(' ') ? '' : ' ') + prediction + ' ';
+                    messageInput.focus();
+                    getPredictions();
+                });
+
+                predictionContainer.appendChild(predictionElement);
+            });
+        }
+
+        function analyzeSentiment() {
+            const sentimentModal = new bootstrap.Modal(document.getElementById('sentimentModal'));
+            sentimentModal.show();
+
+            fetch(`/api/sentiment/${roomName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('sentimentModalContent').innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>${data.error}
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    displaySentimentAnalysis(data);
+                })
+                .catch(error => {
+                    console.error('Error analyzing sentiment:', error);
+                    document.getElementById('sentimentModalContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Failed to analyze sentiment. Please try again.
+                        </div>
+                    `;
+                });
+        }
+
+        function displaySentimentAnalysis(data) {
+            // Update sidebar sentiment indicator
+            const sentimentContainer = document.getElementById('sentimentContainer');
+
+            let sentimentClass = '';
+            let sentimentIcon = '';
+
+            if (data.average_sentiment >= 0.5) {
+                sentimentClass = 'success';
+                sentimentIcon = 'emoji-smile-fill';
+            } else if (data.average_sentiment > 0) {
+                sentimentClass = 'info';
+                sentimentIcon = 'emoji-smile';
+            } else if (data.average_sentiment === 0) {
+                sentimentClass = 'secondary';
+                sentimentIcon = 'emoji-neutral';
+            } else if (data.average_sentiment > -0.5) {
+                sentimentClass = 'warning';
+                sentimentIcon = 'emoji-frown';
+            } else {
+                sentimentClass = 'danger';
+                sentimentIcon = 'emoji-angry-fill';
+            }
+
+            sentimentContainer.innerHTML = `
+                <div class="text-center mb-3">
+                    <i class="bi bi-${sentimentIcon} text-${sentimentClass}" style="font-size: 2rem;"></i>
+                    <h5 class="mt-2">${data.sentiment_label}</h5>
+                    <p class="text-muted">Score: ${data.average_sentiment.toFixed(2)}</p>
+                </div>
+                <button class="btn btn-sm btn-outline-${sentimentClass} w-100" id="analyzeSentimentButton">
+                    <i class="bi bi-graph-up me-1"></i>View Details
+                </button>
+            `;
+
+            // Re-attach event listener
+            document.getElementById('analyzeSentimentButton').addEventListener('click', analyzeSentiment);
+
+            // Update modal content
+            const modalContent = document.getElementById('sentimentModalContent');
+
+            // Create sentiment distribution chart
+            const chartContainer = document.createElement('div');
+            chartContainer.className = 'mb-4';
+            chartContainer.innerHTML = '<canvas id="sentimentChart"></canvas>';
+
+            modalContent.innerHTML = '';
+            modalContent.appendChild(chartContainer);
+
+            // Add summary
+            const summary = document.createElement('div');
+            summary.className = 'mb-4';
+            summary.innerHTML = `
+                <h5>Sentiment Summary</h5>
+                <p>Overall sentiment: <strong>${data.sentiment_label}</strong> (${data.average_sentiment.toFixed(2)})</p>
+                <p>Messages analyzed: ${data.message_count}</p>
+            `;
+            modalContent.appendChild(summary);
+
+            // Add most positive and negative messages
+            const extremes = document.createElement('div');
+            extremes.className = 'row';
+            extremes.innerHTML = `
+                <div class="col-md-6">
+                    <div class="card border-success mb-3">
+                        <div class="card-header bg-success text-white">Most Positive Message</div>
+                        <div class="card-body">
+                            <p class="card-text">"${data.most_positive.message}"</p>
+                            <p class="card-text text-muted">
+                                By ${data.most_positive.author} (Score: ${data.most_positive.score.toFixed(2)})
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-danger mb-3">
+                        <div class="card-header bg-danger text-white">Most Negative Message</div>
+                        <div class="card-body">
+                            <p class="card-text">"${data.most_negative.message}"</p>
+                            <p class="card-text text-muted">
+                                By ${data.most_negative.author} (Score: ${data.most_negative.score.toFixed(2)})
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modalContent.appendChild(extremes);
+
+            // Create chart
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            const categories = data.categories;
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: [
+                            '#28a745', // Very Positive
+                            '#20c997', // Positive
+                            '#6c757d', // Neutral
+                            '#ffc107', // Negative
+                            '#dc3545'  // Very Negative
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Sentiment Distribution'
+                        }
+                    }
+                }
+            });
+        }
+
+        function findSimilarRooms() {
+            const container = document.getElementById('similarRoomsContainer');
+
+            container.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Finding similar rooms...</p>
+                </div>
+            `;
+
+            // This would be a real API call in a complete implementation
+            // For now, we'll simulate it with a timeout
+            setTimeout(() => {
+                container.innerHTML = `
+                    <div class="list-group list-group-flush">
+                        <a href="/join_room?room_name=tech_chat" class="list-group-item list-group-item-action">
+                            tech_chat
+                        </a>
+                        <a href="/join_room?room_name=programming" class="list-group-item list-group-item-action">
+                            programming
+                        </a>
+                        <a href="/join_room?room_name=developers" class="list-group-item list-group-item-action">
+                            developers
+                        </a>
+                    </div>
+                `;
+            }, 1500);
+        }
+
+        function showError(message) {
+            const errorElement = document.createElement('div');
+            errorElement.className = 'alert alert-danger alert-dismissible fade show';
+            errorElement.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.querySelector('.container').prepend(errorElement);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                errorElement.remove();
+            }, 5000);
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(messageUpdateInterval);
+        });
+    });
+</script>
+{% endblock %}

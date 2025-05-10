@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}AI-Enhanced Chat - Home{% endblock %}
+
+{% block content %}
+<div class="row align-items-center">
+    <div class="col-md-6">
+        <div class="p-4">
+            <h1 class="display-4 fw-bold text-primary">Welcome to AI-Enhanced Chat</h1>
+            <p class="lead">A modern chat application powered by artificial intelligence.</p>
+            <hr class="my-4">
+            <p>Create or join chat rooms, interact with AI features, and enjoy a smarter messaging experience.</p>
+
+            {% if not session.username %}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="bi bi-person-plus me-2"></i>Create Account
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg px-4 me-md-2">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                </a>
+                <button class="btn btn-outline-secondary btn-lg px-4" data-bs-toggle="modal" data-bs-target="#aiInfoModal">
+                    <i class="bi bi-robot me-2"></i>Learn About AI Features
+                </button>
+            </div>
+            {% else %}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a href="{{ url_for('rooms') }}" class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="bi bi-chat-dots me-2"></i>Go to Chat Rooms
+                </a>
+                <a href="{{ url_for('create_room') }}" class="btn btn-success btn-lg px-4 me-md-2">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Room
+                </a>
+                <a href="{{ url_for('profile') }}" class="btn btn-info btn-lg px-4 text-white">
+                    <i class="bi bi-person me-2"></i>My Profile
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="p-4 text-center">
+            <img src="{{ url_for('static', filename='images/chat-illustration.svg') }}" alt="Chat Illustration" class="img-fluid" style="max-height: 400px;">
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Key Features</h2>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-emoji-smile text-info" style="font-size: 3rem;"></i>
+                <h3 class="card-title mt-3">Sentiment Analysis</h3>
+                <p class="card-text">Analyze the emotional tone of messages in real-time and get insights into conversation sentiment.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up text-success" style="font-size: 3rem;"></i>
+                <h3 class="card-title mt-3">Smart Recommendations</h3>
+                <p class="card-text">Discover relevant chat rooms based on your interests and conversation patterns.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-robot text-warning" style="font-size: 3rem;"></i>
+                <h3 class="card-title mt-3">AI Assistant</h3>
+                <p class="card-text">Interact with an intelligent chatbot that can answer questions and provide helpful information.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h3 class="card-title text-center">About This Project</h3>
+                <p class="card-text">
+                    This AI-Enhanced Chat Application demonstrates the integration of artificial intelligence features into a modern web application.
+                    It showcases skills in web development, natural language processing, machine learning, database design, and user experience design.
+                </p>
+                <p class="card-text">
+                    The application uses MongoDB for data storage, providing improved performance, scalability, and reliability.
+                    Advanced features include user authentication, real-time messaging with WebSockets, Redis caching, and comprehensive analytics.
+                </p>
+                <p class="card-text">
+                    AI capabilities include sentiment analysis, recommendation systems, topic modeling, predictive text, and user interest profiling,
+                    all enhanced with MongoDB's aggregation framework for advanced data analysis.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

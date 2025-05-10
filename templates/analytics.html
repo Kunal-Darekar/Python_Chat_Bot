@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - AI-Enhanced Chat{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-graph-up me-2"></i>Analytics Dashboard</h4>
+                <div class="btn-group">
+                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-calendar3 me-1"></i>{{ time_range }} Days
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('analytics', days=7) }}">Last 7 Days</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('analytics', days=30) }}">Last 30 Days</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('analytics', days=90) }}">Last 90 Days</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Total Messages</h6>
+                                        <h2 class="mb-0">{{ analytics.total_messages }}</h2>
+                                    </div>
+                                    <i class="bi bi-chat-dots" style="font-size: 2rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Active Users</h6>
+                                        <h2 class="mb-0">{{ analytics.total_users }}</h2>
+                                    </div>
+                                    <i class="bi bi-people" style="font-size: 2rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Active Rooms</h6>
+                                        <h2 class="mb-0">{{ analytics.total_rooms }}</h2>
+                                    </div>
+                                    <i class="bi bi-door-open" style="font-size: 2rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title">Avg. Sentiment</h6>
+                                        <h2 class="mb-0">
+                                            {% set sentiment_values = [] %}
+                                            {% for activity in analytics.daily_activity %}
+                                                {% if activity.avg_sentiment is defined and activity.avg_sentiment is not none %}
+                                                    {% set sentiment_values = sentiment_values + [activity.avg_sentiment] %}
+                                                {% endif %}
+                                            {% endfor %}
+
+                                            {% if sentiment_values|length > 0 %}
+                                                {% set avg_sentiment = sentiment_values|sum / sentiment_values|length %}
+                                                {% if avg_sentiment > 0.2 %}
+                                                    <i class="bi bi-emoji-smile me-2"></i>{{ "%.2f"|format(avg_sentiment) }}
+                                                {% elif avg_sentiment < -0.2 %}
+                                                    <i class="bi bi-emoji-frown me-2"></i>{{ "%.2f"|format(avg_sentiment) }}
+                                                {% else %}
+                                                    <i class="bi bi-emoji-neutral me-2"></i>{{ "%.2f"|format(avg_sentiment) }}
+                                                {% endif %}
+                                            {% else %}
+                                                <i class="bi bi-emoji-neutral me-2"></i>0.00
+                                            {% endif %}
+                                        </h2>
+                                    </div>
+                                    <i class="bi bi-emoji-smile" style="font-size: 2rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Daily Activity</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="dailyActivityChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">User Engagement</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="userEngagementChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Top Active Rooms</h5>
+                                <a href="{{ url_for('rooms') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Room</th>
+                                                <th>Messages</th>
+                                                <th>Users</th>
+                                                <th>Sentiment</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for room in analytics.top_rooms %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('chat_room', room_name=room._id) }}">{{ room.name }}</a>
+                                                </td>
+                                                <td>{{ room.message_count }}</td>
+                                                <td>{{ room.user_count }}</td>
+                                                <td>
+                                                    {% if room.avg_sentiment is defined and room.avg_sentiment is not none %}
+                                                        {% if room.avg_sentiment > 0.2 %}
+                                                            <span class="text-success"><i class="bi bi-emoji-smile"></i> {{ "%.2f"|format(room.avg_sentiment) }}</span>
+                                                        {% elif room.avg_sentiment < -0.2 %}
+                                                            <span class="text-danger"><i class="bi bi-emoji-frown"></i> {{ "%.2f"|format(room.avg_sentiment) }}</span>
+                                                        {% else %}
+                                                            <span class="text-muted"><i class="bi bi-emoji-neutral"></i> {{ "%.2f"|format(room.avg_sentiment) }}</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-muted"><i class="bi bi-emoji-neutral"></i> 0.00</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Top Active Users</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Messages</th>
+                                                <th>Rooms</th>
+                                                <th>Sentiment</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in analytics.top_users %}
+                                            <tr>
+                                                <td>{{ user._id }}</td>
+                                                <td>{{ user.message_count }}</td>
+                                                <td>{{ user.room_count }}</td>
+                                                <td>
+                                                    {% if user.avg_sentiment is defined and user.avg_sentiment is not none %}
+                                                        {% if user.avg_sentiment > 0.2 %}
+                                                            <span class="text-success"><i class="bi bi-emoji-smile"></i> {{ "%.2f"|format(user.avg_sentiment) }}</span>
+                                                        {% elif user.avg_sentiment < -0.2 %}
+                                                            <span class="text-danger"><i class="bi bi-emoji-frown"></i> {{ "%.2f"|format(user.avg_sentiment) }}</span>
+                                                        {% else %}
+                                                            <span class="text-muted"><i class="bi bi-emoji-neutral"></i> {{ "%.2f"|format(user.avg_sentiment) }}</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-muted"><i class="bi bi-emoji-neutral"></i> 0.00</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Daily Activity Chart
+        const dailyActivityCtx = document.getElementById('dailyActivityChart').getContext('2d');
+        const dailyActivityChart = new Chart(dailyActivityCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for activity in analytics.daily_activity %}
+                        {% if activity.date is defined and activity.date is not none %}
+                            {{ activity.date|tojson }},
+                        {% endif %}
+                    {% endfor %}
+                ],
+                datasets: [
+                    {
+                        label: 'Messages',
+                        data: [
+                            {% for activity in analytics.daily_activity %}
+                                {% if activity.message_count is defined and activity.message_count is not none %}
+                                    {{ activity.message_count }},
+                                {% endif %}
+                            {% endfor %}
+                        ],
+                        backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Active Users',
+                        data: [
+                            {% for activity in analytics.daily_activity %}
+                                {% if activity.user_count is defined and activity.user_count is not none %}
+                                    {{ activity.user_count }},
+                                {% endif %}
+                            {% endfor %}
+                        ],
+                        backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Messages'
+                        }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        type: 'linear',
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Users'
+                        }
+                    }
+                }
+            }
+        });
+
+        // User Engagement Chart
+        const userEngagementCtx = document.getElementById('userEngagementChart').getContext('2d');
+        const userEngagementChart = new Chart(userEngagementCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    {% for user in analytics.top_users %}
+                        {% if user._id is defined and user._id is not none %}
+                            {{ user._id|tojson }},
+                        {% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for user in analytics.top_users %}
+                            {% if user.message_count is defined and user.message_count is not none %}
+                                {{ user.message_count }},
+                            {% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        'rgba(0, 123, 255, 0.7)',
+                        'rgba(40, 167, 69, 0.7)',
+                        'rgba(255, 193, 7, 0.7)',
+                        'rgba(220, 53, 69, 0.7)',
+                        'rgba(111, 66, 193, 0.7)',
+                        'rgba(23, 162, 184, 0.7)',
+                        'rgba(108, 117, 125, 0.7)',
+                        'rgba(253, 126, 20, 0.7)',
+                        'rgba(32, 201, 151, 0.7)',
+                        'rgba(102, 16, 242, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

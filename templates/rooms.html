@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Rooms - AI-Enhanced Chat{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-chat-square-dots me-2"></i>Available Chat Rooms</h4>
+                <a href="{{ url_for('create_room') }}" class="btn btn-light btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Create Room
+                </a>
+            </div>
+            <div class="card-body">
+                {% if rooms %}
+                <div class="list-group">
+                    {% for room in rooms %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ room.name }}</h5>
+                            <small>{{ room.message_count }} messages</small>
+                        </div>
+                        {% if room.description %}
+                        <p class="mb-1">{{ room.description }}</p>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% for tag in room.tags %}
+                                <span class="badge bg-info text-dark me-1">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            <a href="{{ url_for('join_room') }}?room_name={{ room.name }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Join
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>No rooms available. Be the first to create one!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        {% if recommendations %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommended for You</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for room in recommendations %}
+                    <a href="{{ url_for('join_room') }}?room_name={{ room }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ room }}</h6>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">Based on your interests and activity</small>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Find Rooms</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="roomSearch" class="form-label">Search by name or tag</label>
+                    <input type="text" class="form-control" id="roomSearch" placeholder="Enter room name or tag">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Filter by tags</label>
+                    <div id="tagFilters" class="d-flex flex-wrap gap-2">
+                        <!-- Tags will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="d-grid">
+                    <button id="searchButton" class="btn btn-primary">
+                        <i class="bi bi-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Extract all tags from rooms
+        const rooms = {{ rooms|tojson }};
+        const allTags = new Set();
+        
+        rooms.forEach(room => {
+            if (room.tags && room.tags.length) {
+                room.tags.forEach(tag => allTags.add(tag));
+            }
+        });
+        
+        // Populate tag filters
+        const tagFiltersContainer = document.getElementById('tagFilters');
+        allTags.forEach(tag => {
+            const tagButton = document.createElement('button');
+            tagButton.className = 'btn btn-sm btn-outline-info tag-filter';
+            tagButton.setAttribute('data-tag', tag);
+            tagButton.textContent = tag;
+            tagButton.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+            tagFiltersContainer.appendChild(tagButton);
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('roomSearch');
+        const searchButton = document.getElementById('searchButton');
+        const roomList = document.querySelector('.list-group');
+        
+        searchButton.addEventListener('click', function() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedTags = Array.from(document.querySelectorAll('.tag-filter.active'))
+                .map(btn => btn.getAttribute('data-tag'));
+            
+            // Filter rooms
+            const filteredRooms = rooms.filter(room => {
+                const nameMatch = room.name.toLowerCase().includes(searchTerm);
+                const descMatch = room.description && room.description.toLowerCase().includes(searchTerm);
+                
+                let tagMatch = true;
+                if (selectedTags.length > 0) {
+                    tagMatch = selectedTags.some(tag => room.tags && room.tags.includes(tag));
+                }
+                
+                return (nameMatch || descMatch) && tagMatch;
+            });
+            
+            // Update UI
+            roomList.innerHTML = '';
+            
+            if (filteredRooms.length === 0) {
+                roomList.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>No rooms match your search criteria.
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredRooms.forEach(room => {
+                const roomElement = document.createElement('div');
+                roomElement.className = 'list-group-item list-group-item-action';
+                
+                const tagsHtml = room.tags ? room.tags.map(tag => 
+                    `<span class="badge bg-info text-dark me-1">${tag}</span>`
+                ).join('') : '';
+                
+                roomElement.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">${room.name}</h5>
+                        <small>${room.message_count} messages</small>
+                    </div>
+                    ${room.description ? `<p class="mb-1">${room.description}</p>` : ''}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>${tagsHtml}</div>
+                        <a href="/join_room?room_name=${room.name}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Join
+                        </a>
+                    </div>
+                `;
+                
+                roomList.appendChild(roomElement);
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Create Room - AI-Enhanced Chat{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Chat Room</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('create_room') }}">
+                    <div class="mb-3">
+                        <label for="room_name" class="form-label">Room Name</label>
+                        <input type="text" class="form-control" id="room_name" name="room_name" placeholder="Enter room name" required>
+                        <div class="form-text">Choose a unique name for your chat room (more than 2 characters).</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="room_password" class="form-label">Room Password</label>
+                        <input type="password" class="form-control" id="room_password" name="room_password" placeholder="Enter room password" required>
+                        <div class="form-text">Set a password to control access to your room.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter room description (optional)"></textarea>
+                        <div class="form-text">Describe what your room is about to help others find it.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Tags</label>
+                        <input type="text" class="form-control" id="tags" name="tags" placeholder="Enter tags separated by commas (e.g., gaming, music, tech)">
+                        <div class="form-text">Add tags to categorize your room and make it easier to discover.</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Create Room
+                        </button>
+                        <a href="{{ url_for('rooms') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Rooms
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-lightbulb me-2"></i>Tips for Creating a Great Room</h5>
+                <ul class="card-text">
+                    <li><strong>Choose a descriptive name</strong> that clearly indicates the room's purpose.</li>
+                    <li><strong>Write a detailed description</strong> to help users understand what to expect.</li>
+                    <li><strong>Add relevant tags</strong> to make your room discoverable in searches.</li>
+                    <li><strong>Use a secure password</strong> but make it easy to share with intended participants.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
